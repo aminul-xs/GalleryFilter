@@ -4,7 +4,7 @@
  * Usage: $('#gallery').GalleryFilter({ options })
  * Author: Custom Plugin
  */
-;(function ($, window, document, undefined) {
+(function ($, window, document, undefined) {
   'use strict';
 
   var pluginName = 'GalleryFilter';
