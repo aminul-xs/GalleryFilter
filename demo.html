@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>GalleryFilter jQuery Plugin — Demo</title>
+
+  <!-- 1. Plugin CSS -->
+  <link rel="stylesheet" href="jquery.GalleryFilter.css" />
+
+  <style>
+    body {
+      margin: 0;
+      padding: 24px 20px;
+      background: #f9fafb;
+      font-family: system-ui, sans-serif;
+    }
+    h1 { font-size: 22px; font-weight: 600; color: #111827; margin-bottom: 4px; }
+    p  { font-size: 14px; color: #6b7280; margin-bottom: 24px; }
+    #my-gallery { max-width: 960px; margin: 0 auto; }
+    /* ── Thumbnail area ──────────────────────────────────────────────────────── */
+.filter-item .filter-thumb {
+  width: 100%;
+  flex-shrink: 0;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f9fafb;
+  min-height: 80px;
+}
+
+.filter-item .filter-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+/* ── Card body ───────────────────────────────────────────────────────────── */
+.filter-item .filter-body {
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  flex: 1;
+  min-height: 0;
+}
+
+/* ── Category tag ────────────────────────────────────────────────────────── */
+.filter-item .filter-tag {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 9px;
+  border-radius: 999px;
+  width: fit-content;
+  flex-shrink: 0;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  background: #ede9fe;
+  color: #5b21b6;
+}
+
+/* ── Title ───────────────────────────────────────────────────────────────── */
+.filter-item .filter-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: #111827;
+  flex-shrink: 0;
+  line-height: 1.35;
+}
+
+/* ── Description ─────────────────────────────────────────────────────────── */
+.filter-item .filter-desc {
+  font-size: 12px;
+  color: #6b7280;
+  line-height: 1.55;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+}
+
+/* Larger cards get bigger text */
+.filter-item[data-rows="2"] .filter-title { font-size: 15px; }
+.filter-item[data-rows="2"] .filter-desc  { font-size: 13px; -webkit-line-clamp: 5; }
+.filter-item[data-cols="2"][data-rows="2"] .filter-title { font-size: 17px; }
+/* ── Item count badge ────────────────────────────────────────────────────── */
+.filter-count {
+  font-size: 12px;
+  color: #9ca3af;
+  white-space: nowrap;
+  margin-left: 4px;
+  align-self: center;
+}
+
+    /* Custom thumb colours (just for demo — replace with real <img> tags) */
+    .filter-thumb.purple { background: #ede9fe; }
+    .filter-thumb.teal   { background: #d1fae5; }
+    .filter-thumb.amber  { background: #fef3c7; }
+    .filter-thumb.coral  { background: #fee2e2; }
+
+    .filter-thumb svg { width: 40px; height: 40px; }
+
+    /* API demo buttons */
+    .api-demo { max-width: 960px; margin: 32px auto 0; padding: 20px; background:#fff; border:1px solid #e5e7eb; border-radius:12px; }
+    .api-demo h2 { font-size:15px; font-weight:600; color:#111827; margin:0 0 12px; }
+    .api-demo .btn-row { display:flex; flex-wrap:wrap; gap:8px; }
+    .api-demo button {
+      padding: 6px 14px; font-size: 13px; border: 1px solid #d1d5db;
+      border-radius: 8px; background: #fff; cursor: pointer; color: #374151;
+      transition: background .2s;
+    }
+    .api-demo button:hover { background: #f3f4f6; }
+    .api-demo button.purple { background: #534AB7; color: #fff; border-color: #534AB7; }
+  </style>
+</head>
+<body>
+
+<h1>GalleryFilter jQuery Plugin</h1>
+<p>Responsive image gallery with Filter · Masonry · Grid · Bento layouts</p>
+
+<!-- ─── Gallery markup ───────────────────────────────────────────────────── -->
+<!--
+  Each .filter-item needs:
+    data-category="your-cat"   ← used by filter
+    data-cols="1|2|3"          ← bento column span
+    data-rows="1|2"            ← bento row span
+-->
+<div id="my-gallery">
+
+  <div class="filter-item" data-category="design" data-cols="2" data-rows="2">
+    <div class="filter-thumb purple" style="height:140px">
+      <svg viewBox="0 0 36 36"><rect width="36" height="36" rx="8" fill="#c4b5fd"/><rect x="8" y="8" width="20" height="13" rx="2" fill="#7c3aed"/><rect x="12" y="24" width="12" height="3" rx="1" fill="#7c3aed"/></svg>
+    </div>
+    <div class="filter-body">
+      <span class="filter-tag" style="background:#ede9fe;color:#5b21b6">Design</span>
+      <div class="filter-title">Brand identity</div>
+      <div class="filter-desc">Full visual identity system for a fintech startup — logo, type, color, and brand guidelines.</div>
+    </div>
+  </div>
+
+  <div class="filter-item" data-category="photo" data-cols="1" data-rows="2">
+    <div class="filter-thumb teal" style="height:140px">
+      <svg viewBox="0 0 36 36"><rect width="36" height="36" rx="8" fill="#6ee7b7"/><rect x="8" y="8" width="20" height="13" rx="2" fill="#059669"/><rect x="12" y="24" width="12" height="3" rx="1" fill="#059669"/></svg>
+    </div>
+    <div class="filter-body">
+      <span class="filter-tag" style="background:#d1fae5;color:#065f46">Photo</span>
+      <div class="filter-title">Golden hour</div>
+      <div class="filter-desc">Landscape photography from the Himalayas at dusk.</div>
+    </div>
+  </div>
+
+  <div class="filter-item" data-category="code" data-cols="1" data-rows="1">
+    <div class="filter-thumb amber" style="height:80px">
+      <svg viewBox="0 0 36 36"><rect width="36" height="36" rx="8" fill="#fcd34d"/><rect x="8" y="8" width="20" height="13" rx="2" fill="#d97706"/><rect x="12" y="24" width="12" height="3" rx="1" fill="#d97706"/></svg>
+    </div>
+    <div class="filter-body">
+      <span class="filter-tag" style="background:#fef3c7;color:#92400e">Code</span>
+      <div class="filter-title">API gateway</div>
+      <div class="filter-desc">Microservices routing on Node.js and Express.</div>
+    </div>
+  </div>
+
+  <div class="filter-item" data-category="design" data-cols="1" data-rows="1">
+    <div class="filter-thumb purple" style="height:80px">
+      <svg viewBox="0 0 36 36"><rect width="36" height="36" rx="8" fill="#c4b5fd"/><rect x="8" y="8" width="20" height="13" rx="2" fill="#7c3aed"/><rect x="12" y="24" width="12" height="3" rx="1" fill="#7c3aed"/></svg>
+    </div>
+    <div class="filter-body">
+      <span class="filter-tag" style="background:#ede9fe;color:#5b21b6">Design</span>
+      <div class="filter-title">Icon set</div>
+      <div class="filter-desc">500 line icons on a 24px grid, SVG & PNG exports.</div>
+    </div>
+  </div>
+
+  <div class="filter-item" data-category="photo" data-cols="2" data-rows="1">
+    <div class="filter-thumb teal" style="height:80px">
+      <svg viewBox="0 0 36 36"><rect width="36" height="36" rx="8" fill="#6ee7b7"/><rect x="8" y="8" width="20" height="13" rx="2" fill="#059669"/><rect x="12" y="24" width="12" height="3" rx="1" fill="#059669"/></svg>
+    </div>
+    <div class="filter-body">
+      <span class="filter-tag" style="background:#d1fae5;color:#065f46">Photo</span>
+      <div class="filter-title">Urban decay</div>
+      <div class="filter-desc">Street documentary series shot across four cities over two years.</div>
+    </div>
+  </div>
+
+  <div class="filter-item" data-category="code" data-cols="1" data-rows="1">
+    <div class="filter-thumb amber" style="height:80px">
+      <svg viewBox="0 0 36 36"><rect width="36" height="36" rx="8" fill="#fcd34d"/><rect x="8" y="8" width="20" height="13" rx="2" fill="#d97706"/><rect x="12" y="24" width="12" height="3" rx="1" fill="#d97706"/></svg>
+    </div>
+    <div class="filter-body">
+      <span class="filter-tag" style="background:#fef3c7;color:#92400e">Code</span>
+      <div class="filter-title">Data pipeline</div>
+      <div class="filter-desc">ETL processing 10M rows/hr with Kafka and Spark.</div>
+    </div>
+  </div>
+
+  <div class="filter-item" data-category="motion" data-cols="1" data-rows="2">
+    <div class="filter-thumb coral" style="height:140px">
+      <svg viewBox="0 0 36 36"><rect width="36" height="36" rx="8" fill="#fca5a5"/><rect x="8" y="8" width="20" height="13" rx="2" fill="#dc2626"/><rect x="12" y="24" width="12" height="3" rx="1" fill="#dc2626"/></svg>
+    </div>
+    <div class="filter-body">
+      <span class="filter-tag" style="background:#fee2e2;color:#991b1b">Motion</span>
+      <div class="filter-title">Hero animation</div>
+      <div class="filter-desc">GSAP scroll-driven animation for a SaaS landing page.</div>
+    </div>
+  </div>
+
+  <div class="filter-item" data-category="design" data-cols="2" data-rows="1">
+    <div class="filter-thumb purple" style="height:80px">
+      <svg viewBox="0 0 36 36"><rect width="36" height="36" rx="8" fill="#c4b5fd"/><rect x="8" y="8" width="20" height="13" rx="2" fill="#7c3aed"/><rect x="12" y="24" width="12" height="3" rx="1" fill="#7c3aed"/></svg>
+    </div>
+    <div class="filter-body">
+      <span class="filter-tag" style="background:#ede9fe;color:#5b21b6">Design</span>
+      <div class="filter-title">UI components</div>
+      <div class="filter-desc">Accessible React component library with full dark mode support.</div>
+    </div>
+  </div>
+
+  <div class="filter-item" data-category="motion" data-cols="1" data-rows="1">
+    <div class="filter-thumb coral" style="height:80px">
+      <svg viewBox="0 0 36 36"><rect width="36" height="36" rx="8" fill="#fca5a5"/><rect x="8" y="8" width="20" height="13" rx="2" fill="#dc2626"/><rect x="12" y="24" width="12" height="3" rx="1" fill="#dc2626"/></svg>
+    </div>
+    <div class="filter-body">
+      <span class="filter-tag" style="background:#fee2e2;color:#991b1b">Motion</span>
+      <div class="filter-title">Lottie pack</div>
+      <div class="filter-desc">12 looping micro-animations for mobile onboarding.</div>
+    </div>
+  </div>
+
+</div>
+<!-- /gallery -->
+
+
+<!-- ─── API demo ──────────────────────────────────────────────────────────── -->
+<div class="api-demo">
+  <h2>Plugin API — control from outside</h2>
+  <div class="btn-row">
+    <button onclick="$('#my-gallery').GalleryFilter('filter','all')">Show all</button>
+    <button onclick="$('#my-gallery').GalleryFilter('filter','design')">Filter: Design</button>
+    <button onclick="$('#my-gallery').GalleryFilter('filter','photo')">Filter: Photo</button>
+    <button onclick="$('#my-gallery').GalleryFilter('filter','code')">Filter: Code</button>
+    <button onclick="$('#my-gallery').GalleryFilter('filter','motion')">Filter: Motion</button>
+
+  </div>
+</div>
+
+
+<!-- ─── Scripts ──────────────────────────────────────────────────────────── -->
+<!-- 2. jQuery (use your own copy or CDN) -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+
+<!-- 3. Plugin JS -->
+<script src="jquery.GalleryFilter.js"></script>
+
+<!-- 4. Initialize -->
+<script>
+$(function () {
+  $('#my-gallery').GalleryFilter({
+    layout:          'masonry',      // default layout
+    showFilters:     true,          // show filter + toggle bar
+    allLabel:        'All',
+    gap:             12,
+    columns:         3,
+    bentoUnitHeight: 140,
+
+    // Responsive breakpoints
+    responsive: [
+      { maxWidth: 480,  columns: 1, bentoUnitHeight: 160 },
+      { maxWidth: 768,  columns: 2, bentoUnitHeight: 150 },
+      { maxWidth: 1200, columns: 3, bentoUnitHeight: 140 },
+    ],
+
+    // Callbacks
+    onFilter: function (category, visibleItems) {
+      console.log('Filtered to:', category, '— visible:', visibleItems.length);
+    },
+    onLayout: function (name) {
+      console.log('Layout changed to:', name);
+    },
+    onItemClick: function ($item, data) {
+      console.log('Clicked item:', data);
+    },
+  });
+});
+</script>
+
+</body>
+</html>

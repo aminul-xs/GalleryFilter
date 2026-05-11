@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="jquery.GalleryFilter.css">
+  <style>
+    body { padding: 20px; background: #f9fafb; }
+
+    /* Image fills full card */
+    .filter-item .filter-thumb {
+      height: 100% !important;
+      min-height: unset;
+    }
+    .filter-item .filter-thumb img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+     #gallery { max-width: 960px; margin: 0 auto; }
+  </style>
+</head>
+<body>
+
+<div id="gallery">
+
+  <div class="filter-item" data-category="nature" data-cols="2" data-rows="2">
+    <div class="filter-thumb"><img src="https://wpmet.com/plugin/elementskit/wp-content/uploads/2024/01/gallery_demo_image_24.webp" alt=""></div>
+  </div>
+
+  <div class="filter-item" data-category="city" data-cols="1" data-rows="1">
+    <div class="filter-thumb"><img src="https://wpmet.com/plugin/elementskit/wp-content/uploads/2024/01/gallery_demo_image_26.webp" alt=""></div>
+  </div>
+
+  <div class="filter-item" data-category="nature" data-cols="1" data-rows="2">
+    <div class="filter-thumb"><img src="https://wpmet.com/plugin/elementskit/wp-content/uploads/2024/01/gallery_demo_image_27.webp" alt=""></div>
+  </div>
+
+  <div class="filter-item" data-category="city" data-cols="2" data-rows="1">
+    <div class="filter-thumb"><img src="https://wpmet.com/plugin/elementskit/wp-content/uploads/2024/01/gallery_demo_image_30.webp" alt=""></div>
+  </div>
+
+  <div class="filter-item" data-category="portrait" data-cols="1" data-rows="1">
+    <div class="filter-thumb"><img src="https://wpmet.com/plugin/elementskit/wp-content/uploads/2024/01/gallery_demo_image_25.webp" alt=""></div>
+  </div>
+
+</div>
+
+<!-- 2. jQuery (use your own copy or CDN) -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+<script src="jquery.GalleryFilter.js"></script>
+<script>
+$(function () {
+  $('#gallery').GalleryFilter({
+    layout: 'masonry',
+    columns: 3,
+    gap: 10,
+    bentoUnitHeight: 180,
+    showFilters: true,
+    responsive: [
+      { maxWidth: 480,  columns: 1, bentoUnitHeight: 220 },
+      { maxWidth: 768,  columns: 2, bentoUnitHeight: 200 },
+      { maxWidth: 1200, columns: 3, bentoUnitHeight: 180 },
+    ],
+    onItemClick: function ($item) {
+      var src = $item.find('img').attr('src');
+      window.open(src, '_blank'); // or trigger your lightbox
+    }
+  });
+});
+</script>
+
+</body>
+</html>
