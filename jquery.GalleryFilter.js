@@ -22,6 +22,12 @@
     // Label for the "show all" filter button
     allLabel: 'All',
 
+    // Extra CSS classes added to the filter bar element
+    filterBarClass: '',
+
+    // Extra CSS classes added to every filter button
+    filterBtnClass: '',
+
     // Gap between cards (px)
     gap: 12,
 
@@ -90,15 +96,15 @@
 
       // Filter bar
       if (o.showFilters) {
-        self.$filterBar = $('<div class="filter-bar"></div>');
+        self.$filterBar = $('<div class="filter-bar' + (o.filterBarClass ? ' ' + o.filterBarClass : '') + '"></div>');
         var categories = self._getCategories();
         var $btnGroup  = $('<div class="filter-group"></div>');
 
-        $('<button class="filter-btn filter-active" data-filter="all">' + o.allLabel + '</button>')
+        $('<button class="filter-btn filter-active' + (o.filterBtnClass ? ' ' + o.filterBtnClass : '') + '" data-filter="all">' + o.allLabel + '</button>')
           .appendTo($btnGroup);
 
         $.each(categories, function (i, cat) {
-          $('<button class="filter-btn" data-filter="' + cat + '">' +
+          $('<button class="filter-btn' + (o.filterBtnClass ? ' ' + o.filterBtnClass : '') + '" data-filter="' + cat + '">' +
             self._capitalize(cat) + '</button>').appendTo($btnGroup);
         });
 
