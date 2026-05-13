@@ -173,6 +173,12 @@ Each gallery item must have the following structure:
   // Animation duration (milliseconds)
   animationDuration: 380,
 
+  // Extra CSS classes added to the filter bar element
+  filterBarClass: '',
+
+  // Extra CSS classes added to every filter button
+  filterBtnClass: '',
+  
   // Responsive breakpoints configuration
   responsive: [
     { maxWidth: 480,  columns: 1, bentoUnitHeight: 160 },
