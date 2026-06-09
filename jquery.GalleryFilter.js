@@ -11,7 +11,7 @@
 
   var defaults = {
     // Layout: 'masonry' | 'grid' | 'bento'
-    layout: 'bento',
+    layout: 'masonry',
 
     // Filter category key in data attribute: data-category="design"
     categoryAttr: 'category',
@@ -25,11 +25,16 @@
     // Extra CSS classes added to the filter bar element
     filterBarClass: '',
 
+    //Extra CSS classes added to the filter bar button group
+    filterBarBtnGroupClass: '',
+
     // Extra CSS classes added to every filter button
     filterBtnClass: '',
 
-    // Gap between cards (px)
-    gap: 12,
+    // column gap for cards (px)
+    colGap: 12,
+    // row gap for cards (px)
+    rowGap: 12,
 
     // Number of columns — set per breakpoint via `responsive`
     columns: 3,
@@ -48,8 +53,8 @@
 
     // Responsive breakpoints: [{ maxWidth, columns, bentoUnitHeight }]
     responsive: [
-      { maxWidth: 480,  columns: 1, bentoUnitHeight: 160 },
-      { maxWidth: 768,  columns: 2, bentoUnitHeight: 150 },
+      { maxWidth: 480, columns: 1, bentoUnitHeight: 160 },
+      { maxWidth: 768, columns: 2, bentoUnitHeight: 150 },
       { maxWidth: 1024, columns: 3, bentoUnitHeight: 140 },
     ],
 
@@ -61,16 +66,16 @@
 
   // ─── Plugin Constructor ───────────────────────────────────────────────────
   function GalleryFilter(element, options) {
-    this.el      = element;
-    this.$el     = $(element);
+    this.el = element;
+    this.$el = $(element);
     this.options = $.extend(true, {}, defaults, options);
-    this._name   = pluginName;
+    this._name = pluginName;
 
     this.currentFilter = 'all';
     this.currentLayout = this.options.layout;
-    this.items         = [];
-    this.$grid         = null;
-    this.$filterBar    = null;
+    this.items = [];
+    this.$grid = null;
+    this.$filterBar = null;
 
     this.init();
   }
@@ -98,14 +103,14 @@
       if (o.showFilters) {
         self.$filterBar = $('<div class="filter-bar' + (o.filterBarClass ? ' ' + o.filterBarClass : '') + '"></div>');
         var categories = self._getCategories();
-        var $btnGroup  = $('<div class="filter-group"></div>');
+        var $btnGroup = $('<div class="filter-group' + (o.filterBarBtnGroupClass ? ' ' + o.filterBarBtnGroupClass : '') + '"></div>');
 
-        $('<button class="filter-btn filter-active' + (o.filterBtnClass ? ' ' + o.filterBtnClass : '') + '" data-filter="all">' + o.allLabel + '</button>')
+        $('<button class="filter-btn filter-active' + (o.filterBtnClass ? ' ' + o.filterBtnClass : '') + '" data-filter="all"><span class="elementskit_filter_nav_text">' + o.allLabel + '</span></button>')
           .appendTo($btnGroup);
 
         $.each(categories, function (i, cat) {
-          $('<button class="filter-btn' + (o.filterBtnClass ? ' ' + o.filterBtnClass : '') + '" data-filter="' + cat + '">' +
-            self._capitalize(cat) + '</button>').appendTo($btnGroup);
+          $('<button class="filter-btn' + (o.filterBtnClass ? ' ' + o.filterBtnClass : '') + '" data-filter="' + cat + '"><span class="elementskit_filter_nav_text">' +
+            self._capitalize(cat) + '</span></button>').appendTo($btnGroup);
         });
 
         self.$filterBar.append($btnGroup);
@@ -131,10 +136,10 @@
       self.$grid.find('.filter-item').each(function () {
         var $item = $(this);
         self.items.push({
-          $el:      $item,
+          $el: $item,
           category: $item.data(o.categoryAttr) || 'general',
-          cols:     parseInt($item.data('cols')) || 1,
-          rows:     parseInt($item.data('rows')) || 1,
+          cols: parseInt($item.data('cols')) || 1,
+          rows: parseInt($item.data('rows')) || 1,
         });
       });
     },
@@ -221,7 +226,7 @@
     layout: function () {
       var self = this;
       var visible = self._getVisible();
-      var hidden  = self._getHidden();
+      var hidden = self._getHidden();
 
       // Hide filtered-out items
       hidden.forEach(function (item) {
@@ -236,9 +241,9 @@
       // }
 
       requestAnimationFrame(function () {
-        if      (self.currentLayout === 'masonry') self._layoutMasonry(visible);
-        else if (self.currentLayout === 'grid')    self._layoutGrid(visible);
-        else                                       self._layoutBento(visible);
+        if (self.currentLayout === 'masonry') self._layoutMasonry(visible);
+        else if (self.currentLayout === 'grid') self._layoutGrid(visible);
+        else self._layoutBento(visible);
       });
 
       return self;
@@ -262,95 +267,159 @@
     _layoutMasonry: function (visible) {
       var self = this, o = self.options;
       var cols = self._getCols();
-      var gap  = o.gap;
-      var W    = self.$grid.width();
-      var cw   = (W - (cols - 1) * gap) / cols;
+
+      // CHANGED
+      var rowGap = o.rowGap || 0;
+      var colGap = o.colGap || 0;
+
+      var W = self.$grid.width();
+
+      // CHANGED
+      var cw = (W - (cols - 1) * colGap) / cols;
+
       var colH = [];
-      for (var i = 0; i < cols; i++) colH.push(0);
+      for (var i = 0; i < cols; i++) {
+        colH.push(0);
+      }
 
       visible.forEach(function (item) {
-        item.$el.css({ width: cw, height: '' });
-        var minH  = Math.min.apply(null, colH);
-        var col   = colH.indexOf(minH);
-        item.$el.css({ left: col * (cw + gap), top: colH[col] });
-        colH[col] += item.$el.outerHeight(true) + gap;
+        item.$el.css({
+          width: cw,
+          height: ''
+        });
+
+        var minH = Math.min.apply(null, colH);
+        var col = colH.indexOf(minH);
+
+        item.$el.css({
+          // CHANGED
+          left: col * (cw + colGap),
+          top: colH[col]
+        });
+
+        // CHANGED
+        colH[col] += item.$el.outerHeight(true) + rowGap;
       });
 
       self.$grid.css('height', Math.max.apply(null, colH));
     },
 
-    // ── Grid layout ────────────────────────────────────────────────────────
     _layoutGrid: function (visible) {
       var self = this, o = self.options;
       var cols = self._getCols();
-      var gap  = o.gap;
-      var W    = self.$grid.width();
-      var cw   = (W - (cols - 1) * gap) / cols;
-      var rh   = Math.round(cw * 0.85);
-
+      // CHANGED
+      var rowGap = o.rowGap || 0;
+      var colGap = o.colGap || 0;
+      var W = self.$grid.width();
+      // CHANGED
+      var cw = (W - (cols - 1) * colGap) / cols;
+      var rh = Math.round(cw * 0.85);
       visible.forEach(function (item, i) {
         var col = i % cols;
         var row = Math.floor(i / cols);
-        item.$el.css({ width: cw, height: rh, left: col * (cw + gap), top: row * (rh + gap) });
+        item.$el.css({
+          width: cw,
+          height: rh,
+          // CHANGED
+          left: col * (cw + colGap),
+          // CHANGED
+          top: row * (rh + rowGap)
+        });
       });
 
       var rows = Math.ceil(visible.length / cols);
-      self.$grid.css('height', rows * (rh + gap));
+
+      // CHANGED
+      self.$grid.css('height', rows * (rh + rowGap));
     },
 
     // ── Bento layout ───────────────────────────────────────────────────────
     _layoutBento: function (visible) {
       var self = this, o = self.options;
-      var cols   = self._getCols();
-      var gap    = o.gap;
-      var unitH  = self._getBentoUnitH();
-      var W      = self.$grid.width();
-      var unit   = (W - (cols - 1) * gap) / cols;
-      var occ    = [];
+      var cols = self._getCols();
+
+      // CHANGED
+      var rowGap = o.rowGap || 0;
+      var colGap = o.colGap || 0;
+
+      var unitH = self._getBentoUnitH();
+      var W = self.$grid.width();
+
+      // CHANGED
+      var unit = (W - (cols - 1) * colGap) / cols;
+
+      var occ = [];
       var maxRow = 0;
 
       function isFree(c, r, cs, rs) {
         if (c + cs > cols) return false;
-        for (var rr = r; rr < r + rs; rr++)
-          for (var cc = c; cc < c + cs; cc++)
+
+        for (var rr = r; rr < r + rs; rr++) {
+          for (var cc = c; cc < c + cs; cc++) {
             if (occ[rr * cols + cc]) return false;
+          }
+        }
+
         return true;
       }
+
       function occupy(c, r, cs, rs) {
-        for (var rr = r; rr < r + rs; rr++)
-          for (var cc = c; cc < c + cs; cc++)
+        for (var rr = r; rr < r + rs; rr++) {
+          for (var cc = c; cc < c + cs; cc++) {
             occ[rr * cols + cc] = true;
+          }
+        }
+
         maxRow = Math.max(maxRow, r + rs);
       }
+
       function findSlot(cs, rs) {
-        for (var r = 0; r < 200; r++)
-          for (var c = 0; c <= cols - cs; c++)
-            if (isFree(c, r, cs, rs)) { occupy(c, r, cs, rs); return { c: c, r: r }; }
+        for (var r = 0; r < 200; r++) {
+          for (var c = 0; c <= cols - cs; c++) {
+            if (isFree(c, r, cs, rs)) {
+              occupy(c, r, cs, rs);
+              return { c: c, r: r };
+            }
+          }
+        }
+
         return { c: 0, r: 0 };
       }
 
       visible.forEach(function (item) {
-        var cs   = Math.min(item.cols || 1, cols);
-        var rs   = item.rows || 1;
+        var cs = Math.min(item.cols || 1, cols);
+        var rs = item.rows || 1;
 
-        // On 1-col breakpoint force single cell
-        if (cols === 1) { cs = 1; rs = 1; }
+        if (cols === 1) {
+          cs = 1;
+          rs = 1;
+        }
 
         var slot = findSlot(cs, rs);
-        var x    = slot.c * (unit + gap);
-        var y    = slot.r * (unitH + gap);
-        var w    = cs * unit + (cs - 1) * gap;
-        var h    = rs * unitH + (rs - 1) * gap;
+
+        // CHANGED
+        var x = slot.c * (unit + colGap);
+        var y = slot.r * (unitH + rowGap);
+
+        // CHANGED
+        var w = cs * unit + (cs - 1) * colGap;
+        var h = rs * unitH + (rs - 1) * rowGap;
 
         item.$el.css({
-          width:  Math.round(w),
+          width: Math.round(w),
           height: Math.round(h),
-          left:   Math.round(x),
-          top:    Math.round(y),
+          left: Math.round(x),
+          top: Math.round(y)
         });
       });
 
-      self.$grid.css('height', maxRow * (unitH + gap));
+      // CHANGED
+      self.$grid.css(
+        'height',
+        maxRow > 0
+          ? maxRow * unitH + (maxRow - 1) * rowGap
+          : 0
+      );
     },
 
     // ── Public: destroy() ─────────────────────────────────────────────────
