@@ -1,5 +1,5 @@
 /*!
- * jQuery GalleryFilter Plugin v1.0.0
+ * jQuery GalleryFilter Plugin v1.0.1
  * A responsive image gallery plugin with Filter, Masonry, Grid & Bento layouts
  * Usage: $('#gallery').GalleryFilter({ options })
  * Author: Custom Plugin
@@ -25,15 +25,16 @@
     // Extra CSS classes added to the filter bar element
     filterBarClass: '',
 
-    //Extra CSS classes added to the filter bar button group
+    // Extra CSS classes added to the filter bar button group
     filterBarBtnGroupClass: '',
 
     // Extra CSS classes added to every filter button
     filterBtnClass: '',
 
-    // column gap for cards (px)
+    // Column gap for cards (px)
     colGap: 12,
-    // row gap for cards (px)
+
+    // Row gap for cards (px)
     rowGap: 12,
 
     // Number of columns — set per breakpoint via `responsive`
@@ -53,8 +54,8 @@
 
     // Responsive breakpoints: [{ maxWidth, columns, bentoUnitHeight }]
     responsive: [
-      { maxWidth: 480, columns: 1, bentoUnitHeight: 160 },
-      { maxWidth: 768, columns: 2, bentoUnitHeight: 150 },
+      { maxWidth: 480,  columns: 1, bentoUnitHeight: 160 },
+      { maxWidth: 768,  columns: 2, bentoUnitHeight: 150 },
       { maxWidth: 1024, columns: 3, bentoUnitHeight: 140 },
     ],
 
@@ -66,16 +67,16 @@
 
   // ─── Plugin Constructor ───────────────────────────────────────────────────
   function GalleryFilter(element, options) {
-    this.el = element;
-    this.$el = $(element);
+    this.el      = element;
+    this.$el     = $(element);
     this.options = $.extend(true, {}, defaults, options);
-    this._name = pluginName;
+    this._name   = pluginName;
 
     this.currentFilter = 'all';
     this.currentLayout = this.options.layout;
-    this.items = [];
-    this.$grid = null;
-    this.$filterBar = null;
+    this.items         = [];
+    this.$grid         = null;
+    this.$filterBar    = null;
 
     this.init();
   }
@@ -84,14 +85,27 @@
   $.extend(GalleryFilter.prototype, {
 
     init: function () {
-      var self = this;
-      self._buildDOM();
-      self._bindEvents();
-      self._collectItems();
-      self.layout();
+  var self = this;
+  self._buildDOM();
+  self._bindEvents();
+  self._collectItems();
 
-      $(window).on('resize.' + pluginName, $.proxy(self._onResize, self));
-    },
+  // Single layout call, deferred one tick so $grid.width() is painted
+  $(window).one('load.' + pluginName, function () {
+    self.layout();
+  });
+
+  // Fallback: if load already fired (cached page), run after paint
+  if (document.readyState === 'complete') {
+    requestAnimationFrame(function () {
+      requestAnimationFrame(function () {
+        self.layout();
+      });
+    });
+  }
+
+  $(window).on('resize.' + pluginName, $.proxy(self._onResize, self));
+},
 
     // ── Build wrapper DOM ──────────────────────────────────────────────────
     _buildDOM: function () {
@@ -103,7 +117,7 @@
       if (o.showFilters) {
         self.$filterBar = $('<div class="filter-bar' + (o.filterBarClass ? ' ' + o.filterBarClass : '') + '"></div>');
         var categories = self._getCategories();
-        var $btnGroup = $('<div class="filter-group' + (o.filterBarBtnGroupClass ? ' ' + o.filterBarBtnGroupClass : '') + '"></div>');
+        var $btnGroup  = $('<div class="filter-group' + (o.filterBarBtnGroupClass ? ' ' + o.filterBarBtnGroupClass : '') + '"></div>');
 
         $('<button class="filter-btn filter-active' + (o.filterBtnClass ? ' ' + o.filterBtnClass : '') + '" data-filter="all"><span class="elementskit_filter_nav_text">' + o.allLabel + '</span></button>')
           .appendTo($btnGroup);
@@ -136,10 +150,10 @@
       self.$grid.find('.filter-item').each(function () {
         var $item = $(this);
         self.items.push({
-          $el: $item,
+          $el:      $item,
           category: $item.data(o.categoryAttr) || 'general',
-          cols: parseInt($item.data('cols')) || 1,
-          rows: parseInt($item.data('rows')) || 1,
+          cols:     parseInt($item.data('cols')) || 1,
+          rows:     parseInt($item.data('rows')) || 1,
         });
       });
     },
@@ -226,7 +240,7 @@
     layout: function () {
       var self = this;
       var visible = self._getVisible();
-      var hidden = self._getHidden();
+      var hidden  = self._getHidden();
 
       // Hide filtered-out items
       hidden.forEach(function (item) {
@@ -236,15 +250,16 @@
         item.$el.removeClass('filter-hidden');
       });
 
-      // if (self.$countBadge) {
-      //   self.$countBadge.text(visible.length + ' items');
-      // }
-
-      requestAnimationFrame(function () {
-        if (self.currentLayout === 'masonry') self._layoutMasonry(visible);
-        else if (self.currentLayout === 'grid') self._layoutGrid(visible);
-        else self._layoutBento(visible);
-      });
+      // For masonry: wait for images then layout
+      // For grid/bento: images don't affect height so layout immediately
+      if (self.currentLayout === 'masonry') {
+        self._layoutMasonryWhenReady(visible);
+      } else {
+        requestAnimationFrame(function () {
+          if (self.currentLayout === 'grid') self._layoutGrid(visible);
+          else                               self._layoutBento(visible);
+        });
+      }
 
       return self;
     },
@@ -263,126 +278,169 @@
       });
     },
 
-    // ── Masonry layout ─────────────────────────────────────────────────────
-    _layoutMasonry: function (visible) {
-      var self = this, o = self.options;
-      var cols = self._getCols();
-
-      // CHANGED
-      var rowGap = o.rowGap || 0;
-      var colGap = o.colGap || 0;
-
-      var W = self.$grid.width();
-
-      // CHANGED
-      var cw = (W - (cols - 1) * colGap) / cols;
-
-      var colH = [];
-      for (var i = 0; i < cols; i++) {
-        colH.push(0);
-      }
+    // ── Wait for images inside visible items, then run masonry ────────────
+    // FIX: On page load, outerHeight() returns wrong values if images haven't
+    //      loaded yet — causing rowGap to appear larger than defined.
+    //      This collects all unloaded <img> tags inside visible items and
+    //      defers the layout until every image fires load or error.
+    //      After a filter tab change images are already loaded so the
+    //      promise resolves instantly with no visible delay.
+    _layoutMasonryWhenReady: function (visible) {
+      var self    = this;
+      var pending = [];
 
       visible.forEach(function (item) {
-        item.$el.css({
-          width: cw,
-          height: ''
+        item.$el.find('img').each(function () {
+          // naturalWidth === 0 means not yet decoded/loaded
+          if (!this.complete || this.naturalWidth === 0) {
+            pending.push(this);
+          }
         });
-
-        var minH = Math.min.apply(null, colH);
-        var col = colH.indexOf(minH);
-
-        item.$el.css({
-          // CHANGED
-          left: col * (cw + colGap),
-          top: colH[col]
-        });
-
-        // CHANGED
-        colH[col] += item.$el.outerHeight(true) + rowGap;
       });
 
-      self.$grid.css('height', Math.max.apply(null, colH));
+      if (pending.length === 0) {
+        // All images already loaded — layout on next paint
+        requestAnimationFrame(function () {
+          self._layoutMasonry(visible);
+        });
+        return;
+      }
+
+      // Wait for every pending image to finish (load or error)
+      var settled = 0;
+      var total   = pending.length;
+
+      function onSettle() {
+        settled++;
+        if (settled === total) {
+          // Double rAF: first lets the browser apply dimensions,
+          // second ensures a full paint cycle so outerHeight() is accurate
+          requestAnimationFrame(function () {
+            requestAnimationFrame(function () {
+              self._layoutMasonry(visible);
+            });
+          });
+        }
+      }
+
+      pending.forEach(function (img) {
+        $(img).one('load error', onSettle);
+      });
     },
 
+    // ── Masonry layout ─────────────────────────────────────────────────────
+   _layoutMasonry: function (visible) {
+  var self = this, o = self.options;
+  var cols   = self._getCols();
+  var rowGap = o.rowGap || 0;
+  var colGap = o.colGap || 0;
+  var W      = self.$grid.width();
+
+  if (!W) return;
+
+  // FIX: Disable transitions before measuring so outerHeight()
+  // reads the final settled value, not a mid-animation value
+  self.$grid.find('.filter-item').css('transition', 'none');
+
+  var cw   = (W - (cols - 1) * colGap) / cols;
+  var colH = [];
+  for (var i = 0; i < cols; i++) colH.push(0);
+
+  visible.forEach(function (item) {
+    item.$el.css({ width: cw, height: '' });
+  });
+
+  // FIX: Force a reflow so the browser applies the new width
+  // BEFORE we read outerHeight()
+  self.$grid[0].offsetHeight; // triggers reflow
+
+  visible.forEach(function (item) {
+    var minH = Math.min.apply(null, colH);
+    var col  = colH.indexOf(minH);
+    item.$el.css({
+      left: col * (cw + colGap),
+      top:  colH[col],
+    });
+    colH[col] += item.$el.outerHeight(false) + rowGap;
+  });
+
+  var maxH = Math.max.apply(null, colH);
+  if (maxH > 0) self.$grid.css('height', maxH);
+
+  // FIX: Re-enable transitions after a frame so the browser
+  // doesn't animate from the old position to new position wrong
+  requestAnimationFrame(function () {
+    self.$grid.find('.filter-item').css('transition', '');
+  });
+},
+
+    // ── Grid layout ────────────────────────────────────────────────────────
     _layoutGrid: function (visible) {
       var self = this, o = self.options;
-      var cols = self._getCols();
-      // CHANGED
+      var cols   = self._getCols();
       var rowGap = o.rowGap || 0;
       var colGap = o.colGap || 0;
-      var W = self.$grid.width();
-      // CHANGED
+      var W      = self.$grid.width();
+
+      // FIX: Bail if grid has no width yet (not painted)
+      if (!W) return;
+
       var cw = (W - (cols - 1) * colGap) / cols;
       var rh = Math.round(cw * 0.85);
+
       visible.forEach(function (item, i) {
         var col = i % cols;
         var row = Math.floor(i / cols);
         item.$el.css({
-          width: cw,
+          width:  cw,
           height: rh,
-          // CHANGED
-          left: col * (cw + colGap),
-          // CHANGED
-          top: row * (rh + rowGap)
+          left:   col * (cw + colGap),
+          top:    row * (rh + rowGap),
         });
       });
 
-      var rows = Math.ceil(visible.length / cols);
+      var rows   = Math.ceil(visible.length / cols);
+      var totalH = rows * rh + (rows - 1) * rowGap;
 
-      // CHANGED
-      self.$grid.css('height', rows * (rh + rowGap));
+      // FIX: Only set height if calculated value is meaningful
+      if (totalH > 0) self.$grid.css('height', totalH);
     },
 
     // ── Bento layout ───────────────────────────────────────────────────────
     _layoutBento: function (visible) {
       var self = this, o = self.options;
-      var cols = self._getCols();
-
-      // CHANGED
+      var cols   = self._getCols();
       var rowGap = o.rowGap || 0;
       var colGap = o.colGap || 0;
+      var unitH  = self._getBentoUnitH();
+      var W      = self.$grid.width();
 
-      var unitH = self._getBentoUnitH();
-      var W = self.$grid.width();
+      // FIX: Bail if grid has no width yet (not painted)
+      if (!W) return;
 
-      // CHANGED
-      var unit = (W - (cols - 1) * colGap) / cols;
-
-      var occ = [];
+      var unit   = (W - (cols - 1) * colGap) / cols;
+      var occ    = [];
       var maxRow = 0;
 
       function isFree(c, r, cs, rs) {
         if (c + cs > cols) return false;
-
-        for (var rr = r; rr < r + rs; rr++) {
-          for (var cc = c; cc < c + cs; cc++) {
+        for (var rr = r; rr < r + rs; rr++)
+          for (var cc = c; cc < c + cs; cc++)
             if (occ[rr * cols + cc]) return false;
-          }
-        }
-
         return true;
       }
 
       function occupy(c, r, cs, rs) {
-        for (var rr = r; rr < r + rs; rr++) {
-          for (var cc = c; cc < c + cs; cc++) {
+        for (var rr = r; rr < r + rs; rr++)
+          for (var cc = c; cc < c + cs; cc++)
             occ[rr * cols + cc] = true;
-          }
-        }
-
         maxRow = Math.max(maxRow, r + rs);
       }
 
       function findSlot(cs, rs) {
-        for (var r = 0; r < 200; r++) {
-          for (var c = 0; c <= cols - cs; c++) {
-            if (isFree(c, r, cs, rs)) {
-              occupy(c, r, cs, rs);
-              return { c: c, r: r };
-            }
-          }
-        }
-
+        for (var r = 0; r < 200; r++)
+          for (var c = 0; c <= cols - cs; c++)
+            if (isFree(c, r, cs, rs)) { occupy(c, r, cs, rs); return { c: c, r: r }; }
         return { c: 0, r: 0 };
       }
 
@@ -390,41 +448,33 @@
         var cs = Math.min(item.cols || 1, cols);
         var rs = item.rows || 1;
 
-        if (cols === 1) {
-          cs = 1;
-          rs = 1;
-        }
+        // On 1-col breakpoint force single cell
+        if (cols === 1) { cs = 1; rs = 1; }
 
         var slot = findSlot(cs, rs);
-
-        // CHANGED
-        var x = slot.c * (unit + colGap);
-        var y = slot.r * (unitH + rowGap);
-
-        // CHANGED
-        var w = cs * unit + (cs - 1) * colGap;
-        var h = rs * unitH + (rs - 1) * rowGap;
+        var x    = slot.c * (unit + colGap);
+        var y    = slot.r * (unitH + rowGap);
+        var w    = cs * unit + (cs - 1) * colGap;
+        var h    = rs * unitH + (rs - 1) * rowGap;
 
         item.$el.css({
-          width: Math.round(w),
+          width:  Math.round(w),
           height: Math.round(h),
-          left: Math.round(x),
-          top: Math.round(y)
+          left:   Math.round(x),
+          top:    Math.round(y),
         });
       });
 
-      // CHANGED
       self.$grid.css(
         'height',
-        maxRow > 0
-          ? maxRow * unitH + (maxRow - 1) * rowGap
-          : 0
+        maxRow > 0 ? maxRow * unitH + (maxRow - 1) * rowGap : 0
       );
     },
 
     // ── Public: destroy() ─────────────────────────────────────────────────
     destroy: function () {
       $(window).off('resize.' + pluginName);
+      $(window).off('load.' + pluginName);
       this.$el.off('.' + pluginName);
       this.$filterBar && this.$filterBar.remove();
       this.$grid.find('.filter-item').css({ position: '', width: '', height: '', left: '', top: '' });
