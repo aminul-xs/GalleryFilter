@@ -1,102 +1,100 @@
 /*!
- * jQuery GalleryFilter Plugin v1.0.0 — Stylesheet
+ * jQuery GalleryFilter Plugin v1.0.1 — Stylesheet
  */
-
-/* ── Wrapper ─────────────────────────────────────────────────────────────── */
 .filter-wrap {
-  width: 100%;
-  font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
-  box-sizing: border-box;
+    width: 100%;
+    font-family:
+        system-ui,
+        -apple-system,
+        "Segoe UI",
+        sans-serif;
+    box-sizing: border-box;
 }
-
 .filter-wrap *,
 .filter-wrap *::before,
 .filter-wrap *::after {
-  box-sizing: border-box;
+    box-sizing: border-box;
 }
-
-/* ── Filter bar ──────────────────────────────────────────────────────────── */
 .filter-bar {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 16px;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 16px;
 }
-
 .filter-group {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  flex: 1;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    flex: 1;
 }
-
 .filter-btn {
-  padding: 8px 34px;
-  font-size: 16px;
-  font-weight: 500;
-  border: 0px solid #d1d5db;
-  border-radius: 0px;
-  background: #fff;
-  color: #6b7280;
-  cursor: pointer;
-  transition: background 0.2s, color 0.2s, border-color 0.2s;
-  line-height: 1.4;
+    padding: 8px 34px;
+    font-size: 16px;
+    font-weight: 500;
+    border: 0 solid #d1d5db;
+    border-radius: 0;
+    background: #fff;
+    color: #6b7280;
+    cursor: pointer;
+    transition:
+        background 0.2s,
+        color 0.2s,
+        border-color 0.2s;
+    line-height: 1.4;
 }
-
 .filter-btn:hover {
-  background: #f3f4f6;
-  border-color: #9ca3af;
-  color: #374a5e;
+    background: #f3f4f6;
+    border-color: #9ca3af;
+    color: #374a5e;
 }
-
 .filter-btn.filter-active {
-  background: #374a5e;
-  color: #fff;
+    background: #374a5e;
+    color: #fff;
 }
-
-/* ── Grid container ──────────────────────────────────────────────────────── */
 .filter-grid {
-  position: relative;
-  width: 100%;
-  transition: height 0.4s ease;
+    position: relative;
+    width: 100%;
+    transition: height 0.4s ease;
 }
-
-/* ── Grid item ───────────────────────────────────────────────────────────── */
 .filter-item {
-  position: absolute;
-  background: #fff;
-  border: 1px solid #e5e7eb;
-  border-radius: 12px;
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-  cursor: pointer;
-
-  transition:
-    left   0.38s cubic-bezier(0.4, 0, 0.2, 1),
-    top    0.38s cubic-bezier(0.4, 0, 0.2, 1),
-    width  0.38s cubic-bezier(0.4, 0, 0.2, 1),
-    height 0.38s cubic-bezier(0.4, 0, 0.2, 1),
-    opacity   0.28s ease,
-    transform 0.28s ease;
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    cursor: pointer;
+    transition:
+        left 0.38s cubic-bezier(0.4, 0, 0.2, 1),
+        top 0.38s cubic-bezier(0.4, 0, 0.2, 1),
+        width 0.38s cubic-bezier(0.4, 0, 0.2, 1),
+        height 0.38s cubic-bezier(0.4, 0, 0.2, 1),
+        opacity 0.28s ease,
+        transform 0.28s ease;
 }
-
+.filter-grid .filter-item {
+    position: absolute;
+}
 .filter-item:hover {
-  border-color: #c4b5fd;
-  transform: translateY(-2px);
+    border-color: #c4b5fd;
+    transform: translateY(-2px);
 }
-
-/* Hidden (filtered out) */
 .filter-item.filter-hidden {
-  opacity: 0;
-  transform: scale(0.9);
-  pointer-events: none;
+    opacity: 0;
+    transform: scale(0.9);
+    pointer-events: none;
 }
-
-/* ── Responsive helpers ──────────────────────────────────────────────────── */
 @media (max-width: 480px) {
-  .filter-bar  { gap: 6px; }
-  .filter-btn  { padding: 4px 11px; font-size: 12px; }
-  .filter-layout-btn  { width: 30px; height: 30px; }
+    .filter-bar {
+        gap: 6px;
+    }
+    .filter-btn {
+        padding: 4px 11px;
+        font-size: 12px;
+    }
+    .filter-layout-btn {
+        width: 30px;
+        height: 30px;
+    }
 }
