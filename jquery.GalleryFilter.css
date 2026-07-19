@@ -32,11 +32,11 @@
 }
 
 .filter-btn {
-  padding: 5px 15px;
-  font-size: 13px;
+  padding: 8px 34px;
+  font-size: 16px;
   font-weight: 500;
-  border: 1px solid #d1d5db;
-  border-radius: 999px;
+  border: 0px solid #d1d5db;
+  border-radius: 0px;
   background: #fff;
   color: #6b7280;
   cursor: pointer;
@@ -47,12 +47,12 @@
 .filter-btn:hover {
   background: #f3f4f6;
   border-color: #9ca3af;
+  color: #374a5e;
 }
 
 .filter-btn.filter-active {
-  background: #534AB7;
+  background: #374a5e;
   color: #fff;
-  border-color: #534AB7;
 }
 
 /* ── Grid container ──────────────────────────────────────────────────────── */
