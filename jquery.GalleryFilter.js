@@ -3,11 +3,16 @@
  * A responsive image gallery plugin with Filter, Masonry, Grid & Bento layouts
  * Usage: $('#gallery').GalleryFilter({ options })
  * Author: Custom Plugin
+ * https://github.com/aminul-xs/GalleryFilter
  */
 (function ($, window, document, undefined) {
   'use strict';
 
   var pluginName = 'GalleryFilter';
+
+  // Window handlers are namespaced per instance; a shared namespace meant
+  // destroying any one gallery unbound the handlers of every other one.
+  var instanceId = 0;
 
   var defaults = {
     // Layout: 'masonry' | 'grid' | 'bento'
@@ -85,27 +90,80 @@
   $.extend(GalleryFilter.prototype, {
 
     init: function () {
-  var self = this;
-  self._buildDOM();
-  self._bindEvents();
-  self._collectItems();
+      var self = this;
 
-  // Single layout call, deferred one tick so $grid.width() is painted
-  $(window).one('load.' + pluginName, function () {
-    self.layout();
-  });
+      self._ns = '.' + pluginName + (++instanceId);
 
-  // Fallback: if load already fired (cached page), run after paint
-  if (document.readyState === 'complete') {
-    requestAnimationFrame(function () {
-      requestAnimationFrame(function () {
+      self._buildDOM();
+      self._bindEvents();
+      self._collectItems();
+
+      // Lay out as soon as the grid is measurable. Deferring the first layout
+      // to `window load` (as this used to) left the absolutely positioned
+      // cards piled on top of each other at 0,0 for as long as the rest of the
+      // page took to finish loading — seconds on a slow connection.
+      self._scheduleLayout();
+
+      // Anything landing after that first pass can still change card heights,
+      // so run again once the page has settled.
+      $(window).one('load' + self._ns, function () {
         self.layout();
       });
-    });
-  }
 
-  $(window).on('resize.' + pluginName, $.proxy(self._onResize, self));
-},
+      // Web fonts swap in after first paint and reflow every card with them.
+      if (document.fonts && document.fonts.ready && document.fonts.ready.then) {
+        document.fonts.ready.then(function () {
+          self.layout();
+        });
+      }
+
+      $(window).on('resize' + self._ns, $.proxy(self._onResize, self));
+
+      self._observeGrid();
+    },
+
+    // ── First layout, retried while the grid still has no width ────────────
+    // The layout methods bail when the grid measures 0 — inside a collapsed
+    // tab or accordion, or before its stylesheet has applied. Without a retry
+    // that bail is final and the cards stay stacked for good.
+    _scheduleLayout: function (attempt) {
+      var self  = this;
+      var tries = attempt || 0;
+
+      requestAnimationFrame(function () {
+        if (self._destroyed) return;
+
+        if (!self.$grid.width() && tries < 60) {
+          self._scheduleLayout(tries + 1);
+          return;
+        }
+
+        self.layout();
+      });
+    },
+
+    // ── Re-layout when the container itself changes width ──────────────────
+    // Covers a late stylesheet, a revealed tab and a resized column — none of
+    // which fire a window resize event.
+    _observeGrid: function () {
+      var self = this;
+
+      if (typeof ResizeObserver === 'undefined') return;
+
+      self._lastGridWidth = self.$grid.width() || 0;
+
+      self._observer = new ResizeObserver(function () {
+        var width = self.$grid.width() || 0;
+
+        // Height changes are our own doing; only a width change matters here.
+        if (width === self._lastGridWidth) return;
+
+        self._lastGridWidth = width;
+        self._onResize();
+      });
+
+      self._observer.observe(self.$grid[0]);
+    },
 
     // ── Build wrapper DOM ──────────────────────────────────────────────────
     _buildDOM: function () {
@@ -306,6 +364,13 @@
         return;
       }
 
+      // Place what can be measured right now, so freshly revealed cards are
+      // never left sitting in normal flow on top of the positioned ones while
+      // their images arrive. The pass below corrects the heights.
+      requestAnimationFrame(function () {
+        self._layoutMasonry(visible);
+      });
+
       // Wait for every pending image to finish (load or error)
       var settled = 0;
       var total   = pending.length;
@@ -336,6 +401,8 @@
   var colGap = o.colGap || 0;
   var W      = self.$grid.width();
 
+  // Not measurable yet — leave the cards in normal flow rather than stacking
+  // them; _observeGrid re-runs this once the grid has a width.
   if (!W) return;
 
   // FIX: Disable transitions before measuring so outerHeight()
@@ -346,7 +413,14 @@
   var colH = [];
   for (var i = 0; i < cols; i++) colH.push(0);
 
-  visible.forEach(function (item) {
+  // Items the host widget keeps hidden (e.g. the "Load More" remainder) have
+  // no height to measure — skip them so they don't book a slot and leave a
+  // phantom row gap behind. Revealing them runs layout() again.
+  var placed = visible.filter(function (item) {
+    return item.$el.css('display') !== 'none';
+  });
+
+  placed.forEach(function (item) {
     item.$el.css({ width: cw, height: '' });
   });
 
@@ -354,10 +428,13 @@
   // BEFORE we read outerHeight()
   self.$grid[0].offsetHeight; // triggers reflow
 
-  visible.forEach(function (item) {
+  placed.forEach(function (item) {
     var minH = Math.min.apply(null, colH);
     var col  = colH.indexOf(minH);
+    // `position` is applied here, together with the coordinates, so a card is
+    // never absolutely positioned without a place to sit.
     item.$el.css({
+      position: 'absolute',
       left: col * (cw + colGap),
       top:  colH[col],
     });
@@ -392,6 +469,7 @@
         var col = i % cols;
         var row = Math.floor(i / cols);
         item.$el.css({
+          position: 'absolute',
           width:  cw,
           height: rh,
           left:   col * (cw + colGap),
@@ -458,6 +536,7 @@
         var h    = rs * unitH + (rs - 1) * rowGap;
 
         item.$el.css({
+          position: 'absolute',
           width:  Math.round(w),
           height: Math.round(h),
           left:   Math.round(x),
@@ -473,8 +552,9 @@
 
     // ── Public: destroy() ─────────────────────────────────────────────────
     destroy: function () {
-      $(window).off('resize.' + pluginName);
-      $(window).off('load.' + pluginName);
+      this._destroyed = true;
+      if (this._observer) this._observer.disconnect();
+      $(window).off(this._ns);
       this.$el.off('.' + pluginName);
       this.$filterBar && this.$filterBar.remove();
       this.$grid.find('.filter-item').css({ position: '', width: '', height: '', left: '', top: '' });
@@ -503,9 +583,18 @@
     }
 
     return this.each(function () {
-      if (!$.data(this, 'plugin_' + pluginName)) {
+      var instance = $.data(this, 'plugin_' + pluginName);
+
+      if (!instance) {
         $.data(this, 'plugin_' + pluginName, new GalleryFilter(this, options));
+        return;
       }
+
+      // Already initialised — a widget handler re-running over the same DOM
+      // (ajax refresh, editor re-render) used to fall through here silently
+      // and leave the cards wherever they had been left. Re-layout instead.
+      if (options) instance.options = $.extend(true, instance.options, options);
+      instance.layout();
     });
   };
 

@@ -1,5 +1,5 @@
 /*!
- * jQuery GalleryFilter Plugin v1.0.0 — Stylesheet
+ * jQuery GalleryFilter Plugin v1.0.1 — Stylesheet
  */
 
 /* ── Wrapper ─────────────────────────────────────────────────────────────── */
@@ -56,6 +56,7 @@
 }
 
 /* ── Grid container ──────────────────────────────────────────────────────── */
+/* Positioning context for the cards the plugin places inside it. */
 .filter-grid {
   position: relative;
   width: 100%;
@@ -63,8 +64,14 @@
 }
 
 /* ── Grid item ───────────────────────────────────────────────────────────── */
+/* NOTE: `position` is deliberately NOT declared here — and it should not be
+   added in theme or widget CSS either. The plugin writes `position: absolute`
+   in the same .css() call as a card's left/top, so a card is never pulled out
+   of flow before it has somewhere to sit. Presetting it in CSS is what used to
+   pile every card onto 0,0 whenever layout was delayed (a collapsed tab, a
+   late stylesheet, images still downloading after "Load More"). Left unset,
+   the not-yet-laid-out state degrades to a readable single column instead. */
 .filter-item {
-  position: absolute;
   background: #fff;
   border: 1px solid #e5e7eb;
   border-radius: 12px;

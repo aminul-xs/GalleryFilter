@@ -103,6 +103,31 @@
 
     .filter-thumb svg { width: 40px; height: 40px; }
 
+    /* ── Layout switcher ───────────────────────────────────────────────────
+       Demo-side UI: the plugin does not render this. It just calls the
+       public setLayout() API — see the script at the bottom of the page. */
+    .layout-switch {
+      max-width: 960px;
+      margin: 0 auto 16px;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 6px;
+    }
+    .layout-switch-label {
+      font-size: 13px; color: #6b7280; margin-right: 6px;
+    }
+    .layout-btn {
+      padding: 6px 16px; font-size: 13px; font-weight: 500;
+      border: 1px solid #d1d5db; border-radius: 8px;
+      background: #fff; color: #374151; cursor: pointer;
+      transition: background .2s, color .2s, border-color .2s;
+    }
+    .layout-btn:hover { background: #f3f4f6; border-color: #9ca3af; }
+    .layout-btn.is-active {
+      background: #374a5e; border-color: #374a5e; color: #fff;
+    }
+
     /* API demo buttons */
     .api-demo { max-width: 960px; margin: 32px auto 0; padding: 20px; background:#fff; border:1px solid #e5e7eb; border-radius:12px; }
     .api-demo h2 { font-size:15px; font-weight:600; color:#111827; margin:0 0 12px; }
@@ -120,6 +145,14 @@
 
 <h1>GalleryFilter jQuery Plugin</h1>
 <p>Responsive image gallery with Filter · Masonry · Grid · Bento layouts</p>
+
+<!-- ─── Layout switcher ──────────────────────────────────────────────────── -->
+<div class="layout-switch">
+  <span class="layout-switch-label">Layout</span>
+  <button type="button" class="layout-btn is-active" data-layout="masonry">Masonry</button>
+  <button type="button" class="layout-btn"           data-layout="grid">Grid</button>
+  <button type="button" class="layout-btn"           data-layout="bento">Bento</button>
+</div>
 
 <!-- ─── Gallery markup ───────────────────────────────────────────────────── -->
 <!--
@@ -261,7 +294,8 @@ $(function () {
     layout:          'masonry',      // default layout
     showFilters:     true,          // show filter + toggle bar
     allLabel:        'All',
-    gap:             12,
+    colGap:          12,
+    rowGap:          12,
     columns:         3,
     bentoUnitHeight: 140,
 
@@ -282,6 +316,17 @@ $(function () {
     onItemClick: function ($item, data) {
       console.log('Clicked item:', data);
     },
+  });
+
+  // ── Layout switcher ─────────────────────────────────────────────────────
+  // setLayout() swaps the layout and re-lays out, firing the onLayout
+  // callback above. The active state is ours to manage — the plugin only
+  // tracks the current layout on `gallery.currentLayout`.
+  $('.layout-switch').on('click', '.layout-btn', function () {
+    var $btn = $(this);
+
+    $btn.addClass('is-active').siblings('.layout-btn').removeClass('is-active');
+    $('#my-gallery').GalleryFilter('setLayout', $btn.data('layout'));
   });
 });
 </script>
