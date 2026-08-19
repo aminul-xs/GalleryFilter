@@ -312,6 +312,28 @@ gallery.currentLayout = 'masonry';
 gallery.layout();
 ```
 
+Building your own layout switcher (this is what `demo.html` does — the plugin
+renders filter buttons, but not layout buttons):
+
+```html
+<div class="layout-switch">
+  <button class="layout-btn is-active" data-layout="masonry">Masonry</button>
+  <button class="layout-btn"           data-layout="grid">Grid</button>
+  <button class="layout-btn"           data-layout="bento">Bento</button>
+</div>
+```
+
+```javascript
+$('.layout-switch').on('click', '.layout-btn', function () {
+  var $btn = $(this);
+  $btn.addClass('is-active').siblings('.layout-btn').removeClass('is-active');
+  $('#gallery').GalleryFilter('setLayout', $btn.data('layout'));
+});
+```
+
+The active state is yours to manage; the plugin only tracks the current layout
+on `gallery.currentLayout`.
+
 ### Re-initialize (Ajax / Re-render)
 
 Calling the plugin again on an element that already has an instance no longer
@@ -638,7 +660,7 @@ Contributions and feedback are welcome! Please feel free to submit issues or imp
 ## 📞 Support
 
 For questions or issues, please refer to the example files:
-- `demo.html` - Basic gallery demo
+- `demo.html` - Basic gallery demo, with a Masonry · Grid · Bento switcher wired to `setLayout()`
 - `image-gallery.html` - Advanced bento layout example
 
 ---

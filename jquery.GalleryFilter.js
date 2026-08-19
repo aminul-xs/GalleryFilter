@@ -3,6 +3,7 @@
  * A responsive image gallery plugin with Filter, Masonry, Grid & Bento layouts
  * Usage: $('#gallery').GalleryFilter({ options })
  * Author: Custom Plugin
+ * https://github.com/aminul-xs/GalleryFilter
  */
 (function ($, window, document, undefined) {
   'use strict';
