@@ -12,6 +12,7 @@ A responsive, animated image gallery plugin for jQuery with powerful filtering, 
 - **Callback Support**: Custom events for filter, layout, and item click actions
 - **Easy Integration**: Simple jQuery plugin that works with minimal setup
 - **Mobile Friendly**: Fully responsive with mobile-first design
+- **Self-Healing Layout**: Re-measures on container resize, late fonts and late images — cards are never left stacked
 
 ## 📋 Table of Contents
 
@@ -23,8 +24,9 @@ A responsive, animated image gallery plugin for jQuery with powerful filtering, 
 6. [API Methods](#api-methods)
 7. [Callbacks](#callbacks)
 8. [Layout Types](#layout-types)
-9. [Responsive Breakpoints](#responsive-breakpoints)
-10. [Browser Support](#browser-support)
+9. [Positioning & Layout Lifecycle](#positioning--layout-lifecycle)
+10. [Responsive Breakpoints](#responsive-breakpoints)
+11. [Browser Support](#browser-support)
 
 ## 📦 Installation
 
@@ -144,7 +146,7 @@ Each gallery item must have the following structure:
 ```javascript
 {
   // Layout type: 'masonry', 'grid', or 'bento'
-  layout: 'bento',
+  layout: 'masonry',
 
   // Category attribute key in HTML data attributes
   categoryAttr: 'category',
@@ -155,8 +157,11 @@ Each gallery item must have the following structure:
   // Label for "Show All" filter button
   allLabel: 'All',
 
-  // Gap between items (pixels)
-  gap: 12,
+  // Horizontal gap between columns (pixels)
+  colGap: 12,
+
+  // Vertical gap between rows (pixels)
+  rowGap: 12,
 
   // Number of columns (default for desktop)
   columns: 3,
@@ -175,6 +180,9 @@ Each gallery item must have the following structure:
 
   // Extra CSS classes added to the filter bar element
   filterBarClass: '',
+
+  // Extra CSS classes added to the filter bar button group
+  filterBarBtnGroupClass: '',
 
   // Extra CSS classes added to every filter button
   filterBtnClass: '',
@@ -201,7 +209,8 @@ Each gallery item must have the following structure:
 $('#gallery').GalleryFilter({
   layout: 'grid',
   columns: 4,
-  gap: 10
+  colGap: 10,
+  rowGap: 10
 });
 ```
 
@@ -296,9 +305,43 @@ console.log(items.length); // Number of gallery items
 ### Change Layout
 
 ```javascript
+gallery.setLayout('masonry');   // fires the onLayout callback
+
+// Equivalent without the callback:
 gallery.currentLayout = 'masonry';
 gallery.layout();
 ```
+
+### Re-initialize (Ajax / Re-render)
+
+Calling the plugin again on an element that already has an instance no longer
+does nothing — it merges any options you pass and re-runs `layout()`. Safe to
+call from a widget handler that re-fires over the same DOM:
+
+```javascript
+$('#gallery').GalleryFilter({ columns: 4 });  // updates options + re-lays out
+```
+
+Call it after you inject new cards, too — but re-collect them first, since
+`items` is captured at init:
+
+```javascript
+$('#gallery .filter-grid').append(newCards);
+var gallery = $('#gallery').data('plugin_GalleryFilter');
+gallery._collectItems();
+gallery.layout();
+```
+
+### Destroy
+
+```javascript
+$('#gallery').GalleryFilter('destroy');
+```
+
+Unbinds only *this* instance's window handlers (they are namespaced per
+instance), disconnects its `ResizeObserver`, removes the filter bar, and clears
+the inline `position`/`width`/`height`/`left`/`top` the layout wrote — so the
+cards fall back into normal document flow.
 
 ## 📞 Callbacks
 
@@ -344,7 +387,8 @@ Displays items in a uniform grid with equal-sized cells:
 $('#gallery').GalleryFilter({
   layout: 'grid',
   columns: 3,
-  gap: 12
+  colGap: 12,
+  rowGap: 12
 });
 ```
 
@@ -385,6 +429,60 @@ $('#gallery').GalleryFilter({
 });
 ```
 
+## 📐 Positioning & Layout Lifecycle
+
+### The plugin owns `position`
+
+Cards are absolutely positioned inside `.filter-grid`, but **the plugin — not
+the stylesheet — applies that**. Each layout pass writes `position: absolute`
+in the *same* `.css()` call as the card's `left`/`top`, so a card is never
+taken out of flow before it has somewhere to sit.
+
+> ⚠️ **Do not set `position` on `.filter-item` in your own CSS.**
+> A rule like `.filter-grid .filter-item { position: absolute; }` in a theme or
+> widget stylesheet re-introduces the bug this design avoids: any moment where
+> layout has not run yet — a collapsed tab, a stylesheet that arrives late,
+> images still downloading after a "Load More" — leaves every card stacked on
+> top of the next at `0,0`.
+
+With `position` left unset, the un-laid-out state degrades to a plain,
+readable single column. `destroy()` clears the inline value and the cards
+return to flow.
+
+The bundled `jquery.GalleryFilter.css` follows this rule. If you ship your own
+stylesheet, style everything else you like — background, border, radius,
+transitions — just leave `position` alone.
+
+### When layout runs
+
+| Trigger | Why it exists |
+|---------|---------------|
+| Next animation frame after init | First layout no longer waits for `window load`, which could be seconds away on a slow page |
+| Retry loop while `.filter-grid` measures `0` | A grid inside a hidden tab/accordion, or before its CSS applies, has no width; layout retries (up to ~60 frames) instead of bailing permanently |
+| `window load` | Anything that landed after the first pass can still change card heights |
+| `document.fonts.ready` | Web fonts swap in after first paint and reflow every card |
+| `window resize` (debounced 120 ms) | Viewport changes the breakpoint / column count |
+| `ResizeObserver` on `.filter-grid` | Container-width changes that fire **no** window resize: a revealed tab, a late stylesheet, a resized sidebar or column. Width-only — height changes are the plugin's own doing and are ignored |
+| Re-calling the plugin on an initialized element | Ajax refresh or editor re-render |
+
+### Masonry and images
+
+Masonry needs real card heights, so `layout()` places everything it can measure
+**immediately** and then corrects once the pending `<img>` elements fire
+`load`/`error`. Freshly revealed cards are therefore positioned from the first
+frame rather than sitting in normal flow on top of the grid while their
+thumbnails download.
+
+### Hidden items
+
+Masonry skips items whose computed `display` is `none` — typically the
+remainder a host "Load More" control keeps hidden. They do not book a slot, so
+no phantom row gap is left behind. Revealing them and calling `layout()` places
+them normally.
+
+Note this is different from *filtered-out* items, which get the
+`.filter-hidden` class (opacity/scale, still positioned) so they can animate.
+
 ## 📱 Responsive Breakpoints
 
 Customize layout for different screen sizes:
@@ -422,6 +520,10 @@ $('#gallery').GalleryFilter({
 - Edge (latest)
 - IE 11 (basic support)
 
+`ResizeObserver` and `document.fonts.ready` are used when present and skipped
+when they are not — on a browser without them you simply lose the container
+resize and font-swap correction passes; everything else still works.
+
 ## 📝 Styling Customization
 
 You can override default styles using CSS:
@@ -433,7 +535,7 @@ You can override default styles using CSS:
   border-color: #your-color;
 }
 
-/* Custom item styling */
+/* Custom item styling — anything except `position` */
 .filter-item {
   border-radius: 8px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
@@ -446,6 +548,10 @@ You can override default styles using CSS:
   border-bottom: 2px solid #e5e7eb;
 }
 ```
+
+> ⚠️ Never add `position` to `.filter-item` (or `.filter-grid .filter-item`).
+> The plugin applies it together with the coordinates — see
+> [Positioning & Layout Lifecycle](#positioning--layout-lifecycle).
 
 ## 🎬 Animation Performance
 
@@ -476,6 +582,34 @@ $('#gallery').GalleryFilter({
 - Ensure `.filter-item` elements have `data-category` attribute
 - Check that `.filter-thumb` contains an `<img>` tag
 - Verify CSS file is properly loaded
+
+### All cards stacked on top of each other at the top-left
+
+Something else is setting `position: absolute` on the cards before the plugin
+lays them out. Search your theme/widget CSS for rules like
+`.filter-grid .filter-item { position: absolute }` and remove them — the plugin
+applies `position` itself, alongside `left`/`top`. See
+[Positioning & Layout Lifecycle](#positioning--layout-lifecycle).
+
+### Cards overlap after a "Load More" click
+
+The newly revealed cards are laid out on the next frame and corrected once
+their images load, so this should resolve itself. If they stay overlapped, the
+`position` rule above is almost always the cause. Also call `_collectItems()`
+before `layout()` if the cards were **appended**, not just un-hidden.
+
+### Gallery inside a tab / accordion lays out wrong
+
+Handled automatically — the first layout retries while the grid measures `0`,
+and a `ResizeObserver` re-lays out when the container gains width. If your tab
+script replaces the grid element entirely, re-init instead:
+`$('#gallery').GalleryFilter()`.
+
+### Unexpected empty rows in masonry
+
+Items with `display: none` are skipped so they cannot book a slot. If you hide
+cards with `visibility: hidden` or `opacity: 0` instead, they still occupy
+space — use `display: none`, or the built-in filter.
 
 ### Filters not working
 
@@ -509,5 +643,17 @@ For questions or issues, please refer to the example files:
 
 ---
 
-**Version:** 1.0.0  
-**Last Updated:** 2026
+**Version:** 1.0.1  
+**Last Updated:** 2026-08-19
+
+### Changelog
+
+**1.0.1**
+- `position: absolute` is now written by the layout methods alongside `left`/`top` instead of being declared in the stylesheet — cards no longer pile up at `0,0` when layout is delayed, and degrade to a single column instead
+- First layout runs on the next animation frame instead of `window load`, and retries while `.filter-grid` still measures `0`
+- `ResizeObserver` on the grid handles container-width changes that fire no window resize
+- `document.fonts.ready` added as a correction pass
+- Masonry places measurable cards immediately, then corrects after images settle
+- Masonry skips `display: none` items so they leave no phantom row gap
+- Window handlers are namespaced per instance; `destroy()` only unbinds its own and disconnects its observer
+- Re-initializing over an existing instance merges options and re-lays out instead of silently doing nothing
